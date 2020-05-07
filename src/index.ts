@@ -21,3 +21,4 @@ export {InteractionMode, RenderMode, Vector, Point2D, Point3D} from './types';
 export {ScatterPlotVisualizerSprites} from './scatter_plot_visualizer_sprites'
 export {ScatterPlot} from './scatter_plot'
 export {makeStyles} from './styles'
+export {ScatterPlotVisualizer3DLabels} from './scatter_plot_visualizer_3d_labels'

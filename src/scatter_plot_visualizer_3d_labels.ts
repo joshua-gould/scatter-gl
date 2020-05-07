@@ -76,17 +76,17 @@ const makeVertexShader = (fontSize: number, scale: number) => `
 
 const FRAGMENT_SHADER = `
       uniform sampler2D texture;
-      uniform bool picking;
+      // uniform bool picking;
       varying vec2 vUv;
       varying vec4 vColor;
 
       void main() {
-        if (picking) {
-          gl_FragColor = vColor;
-        } else {
+        // if (picking) {
+        //   gl_FragColor = vColor;
+        // } else {
           vec4 fromTexture = texture2D(texture, vUv);
           gl_FragColor = vColor * fromTexture;
-        }
+        // }
       }`;
 
 type GlyphTexture = {
@@ -105,7 +105,7 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
   private labelStrings: string[] = [];
   private geometry!: THREE.BufferGeometry;
   private worldSpacePointPositions = new Float32Array(0);
-  private pickingColors = new Float32Array(0);
+  // private pickingColors = new Float32Array(0);
   private renderColors = new Float32Array(0);
   private material!: THREE.ShaderMaterial;
   private uniforms: Object = {};
@@ -123,11 +123,11 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
     canvas.width = MAX_CANVAS_DIMENSION;
     canvas.height = fontSize;
     const ctx = canvas.getContext('2d')!;
-    ctx.font = 'bold ' + fontSize + 'px roboto';
+    ctx.font = 'bold ' + fontSize + 'px Roboto Condensed';
     ctx.textBaseline = 'top';
     ctx.fillStyle = backgroundColor;
-    ctx.rect(0, 0, canvas.width, canvas.height);
-    ctx.fill();
+    // ctx.rect(0, 0, canvas.width, canvas.height);
+    // ctx.fill();
 
     ctx.fillStyle = color;
     const spaceOffset = ctx.measureText(' ').width;
@@ -165,21 +165,22 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
   }
 
   private createColorBuffers(pointCount: number) {
-    this.pickingColors = new Float32Array(
-      this.totalVertexCount * RGB_NUM_ELEMENTS
-    );
+    // this.pickingColors = new Float32Array(
+    //   this.totalVertexCount * RGB_NUM_ELEMENTS
+    // );
     this.renderColors = new Float32Array(
       this.totalVertexCount * RGB_NUM_ELEMENTS
     );
     for (let i = 0; i < pointCount; i++) {
-      const pickingColor = new THREE.Color(i);
+      // const pickingColor = new THREE.Color(i);
       this.labelVertexMap[i].forEach(j => {
-        this.pickingColors[RGB_NUM_ELEMENTS * j] = pickingColor.r;
-        this.pickingColors[RGB_NUM_ELEMENTS * j + 1] = pickingColor.g;
-        this.pickingColors[RGB_NUM_ELEMENTS * j + 2] = pickingColor.b;
+        // this.pickingColors[RGB_NUM_ELEMENTS * j] = pickingColor.r;
+        // this.pickingColors[RGB_NUM_ELEMENTS * j + 1] = pickingColor.g;
+        // this.pickingColors[RGB_NUM_ELEMENTS * j + 2] = pickingColor.b;
         this.renderColors[RGB_NUM_ELEMENTS * j] = 1.0;
         this.renderColors[RGB_NUM_ELEMENTS * j + 1] = 1.0;
         this.renderColors[RGB_NUM_ELEMENTS * j + 2] = 1.0;
+
       });
     }
   }
@@ -191,6 +192,7 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
     }
     const pointCount = this.worldSpacePointPositions.length / XYZ_NUM_ELEMENTS;
     if (pointCount !== this.labelStrings.length) {
+      console.log(pointCount + '!=' +  this.labelStrings.length)
       return;
     }
     this.glyphTexture = this.createGlyphTexture();
@@ -200,11 +202,16 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
       picking: {type: 'bool'},
     };
 
+
     this.material = new THREE.ShaderMaterial({
       uniforms: this.uniforms,
       transparent: true,
       vertexShader: makeVertexShader(fontSize, scale),
       fragmentShader: FRAGMENT_SHADER,
+      // polygonOffset: true,
+      // polygonOffsetFactor: -4,
+      depthWrite: false,
+      depthTest:false
     });
 
     this.processLabelVerts(pointCount);
@@ -286,29 +293,36 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
     }
 
     this.labelsMesh = new THREE.Mesh(this.geometry, this.material);
+    this.labelsMesh.name = '3d_labels_text';
+    this.labelsMesh.renderOrder = 999;
     this.labelsMesh.frustumCulled = false;
-    this.scene.add(this.labelsMesh);
+
   }
 
-  private colorLabels(pointColors: Float32Array) {
+
+  private colorLabels() {
     if (
       this.labelStrings == null ||
-      this.geometry == null ||
-      pointColors == null
-    ) {
+      this.geometry == null) {
       return;
     }
     const colors = this.geometry.getAttribute('color') as THREE.BufferAttribute;
     colors.array = this.renderColors;
 
-    const n = pointColors.length / RGBA_NUM_ELEMENTS;
+    const n = this.labelStrings.length;
     let src = 0;
+    const c = new THREE.Color(
+        1,
+        1,
+        1
+    );
     for (let i = 0; i < n; ++i) {
-      const c = new THREE.Color(
-        pointColors[src],
-        pointColors[src + 1],
-        pointColors[src + 2]
-      );
+      // const c = new THREE.Color(
+      //   pointColors[src],
+      //   pointColors[src + 1],
+      //   pointColors[src + 2]
+      // );
+
       const m = this.labelVertexMap[i].length;
       for (let j = 0; j < m; ++j) {
         colors.setXYZ(this.labelVertexMap[i][j], c.r, c.g, c.b);
@@ -340,23 +354,29 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
   }
 
   onPickingRender(rc: RenderContext) {
-    if (this.geometry == null) {
-      this.createLabels();
-      return;
-    }
-    this.material.uniforms.texture.value = this.glyphTexture.texture;
-    this.material.uniforms.picking.value = true;
-    const colors = this.geometry.getAttribute('color') as THREE.BufferAttribute;
-    colors.array = this.pickingColors;
-    colors.needsUpdate = true;
+    // if (this.geometry == null) {
+    //   this.createLabels();
+    //   return;
+    // }
+    // this.material.uniforms.texture.value = this.glyphTexture.texture;
+    // this.material.uniforms.picking.value = true;
+    // const colors = this.geometry.getAttribute('color') as THREE.BufferAttribute;
+    // colors.array = this.pickingColors;
+    // colors.needsUpdate = true;
+    this.removeMesh();
   }
 
+  private removeMesh() {
+    this.scene.remove(this.labelsMesh);
+  }
   onRender(rc: RenderContext) {
     if (this.geometry == null) {
       this.createLabels();
-      return;
+
     }
-    this.colorLabels(rc.pointColors);
+    this.removeMesh();
+    this.scene.add(this.labelsMesh);
+    this.colorLabels();
     this.material.uniforms.texture.value = this.glyphTexture.texture;
     this.material.uniforms.picking.value = false;
     const colors = this.geometry.getAttribute('color') as THREE.BufferAttribute;
@@ -365,12 +385,17 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
   }
 
   onPointPositionsChanged(newPositions: Float32Array) {
-    this.worldSpacePointPositions = newPositions;
-    this.dispose();
+    // ignore
   }
 
   setLabelStrings(labelStrings: string[]) {
     this.labelStrings = labelStrings;
+    this.dispose();
+  }
+
+  setLabels(labelStrings: string[], positions: Float32Array) {
+    this.labelStrings = labelStrings;
+    this.worldSpacePointPositions = positions;
     this.dispose();
   }
 

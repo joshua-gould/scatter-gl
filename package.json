@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "simplify-js": "^1.2.4",
-    "three": "^0.115.0"
+    "three": "^0.116.1"
   },
   "prettier": {
     "bracketSpacing": false,
