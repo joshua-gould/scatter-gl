@@ -97,8 +97,8 @@ export class ScatterPlot {
   };
   private selectEnabled = true;
 
-  // Map of visualizers by visualizer name/id
-  private visualizers = new Map<string, ScatterPlotVisualizer>();
+  // Array of visualizers
+  private visualizers: ScatterPlotVisualizer[] = [];
 
   private onCameraMoveListeners: OnCameraMoveListener[] = [];
 
@@ -147,6 +147,7 @@ export class ScatterPlot {
       premultipliedAlpha: false,
       antialias: false,
     });
+
     this.renderer.setClearColor(this.styles.backgroundColor, 1);
     this.container.appendChild(this.renderer.domElement);
     this.light = new THREE.PointLight(0xffecbf, 1, 0);
@@ -173,6 +174,8 @@ export class ScatterPlot {
   }
 
   private addInteractionListeners() {
+    this.container.addEventListener('mouseout', this.onMouseOut.bind(this));
+    this.container.addEventListener('mouseenter', this.onMouseOut.bind(this));
     this.container.addEventListener('mousemove', this.onMouseMove.bind(this));
     this.container.addEventListener('mousedown', this.onMouseDown.bind(this));
     this.container.addEventListener('mouseup', this.onMouseUp.bind(this));
@@ -432,6 +435,17 @@ export class ScatterPlot {
     }
   }
 
+  private onMouseOut(e: MouseEvent) {
+    if (!this.selecting) {
+      this.nearestPoint = null;
+      if (this.nearestPoint != this.lastHovered) {
+        this.lastHovered = this.nearestPoint;
+        this.hoverCallback(this.nearestPoint);
+      }
+    }
+  }
+
+
   /** For using ctrl + left click as right click, and for circle select */
   private onKeyDown(e: KeyboardEvent) {
     // If ctrl is pressed, use left click to orbit
@@ -635,29 +649,31 @@ export class ScatterPlot {
     }
   }
 
-  setActiveVisualizers(visualizers: ScatterPlotVisualizer[]) {
-    const nextVisualizerIds = new Set<string>(visualizers.map(v => v.id));
-    for (const visualizer of this.visualizers.values()) {
-      if (!nextVisualizerIds.has(visualizer.id)) {
-        visualizer.dispose();
-        this.visualizers.delete(visualizer.id);
-      }
-    }
+  getActiveVisualizers():ScatterPlotVisualizer[] {
+    return this.visualizers;
+  }
 
-    for (const visualizer of visualizers) {
-      this.visualizers.set(visualizer.id, visualizer);
-      visualizer.setScene(this.scene);
-      visualizer.onResize(this.width, this.height);
-      if (this.worldSpacePointPositions) {
-        visualizer.onPointPositionsChanged(this.worldSpacePointPositions);
-      }
-    }
+  setActiveVisualizers(visualizers: ScatterPlotVisualizer[]) {
+    this.visualizers.forEach(visualizer => {
+        if(visualizers.indexOf(visualizer)===-1) {
+          console.log('dispose ' + visualizer.id);
+          visualizer.dispose();
+        }
+    });
+    this.visualizers = visualizers;
+    this.visualizers.forEach(visualizer => {
+        visualizer.setScene(this.scene);
+        visualizer.onResize(this.width, this.height);
+        if (this.worldSpacePointPositions) {
+            visualizer.onPointPositionsChanged(this.worldSpacePointPositions);
+        }
+    });
   }
 
   /** Disposes all visualizers attached to this scatter plot. */
   disposeAllVisualizers() {
     this.visualizers.forEach(v => v.dispose());
-    this.visualizers.clear();
+    this.visualizers = [];
   }
 
   /** Update scatter plot with a new array of packed xyz point positions. */
