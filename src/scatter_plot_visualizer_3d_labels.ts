@@ -108,7 +108,7 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
   // private pickingColors = new Float32Array(0);
   private renderColors = new Float32Array(0);
   private material!: THREE.ShaderMaterial;
-  private uniforms: Object = {};
+  private uniforms: any = {};
   private labelsMesh!: THREE.Mesh;
   private positions!: THREE.BufferAttribute;
   private totalVertexCount = 0;
