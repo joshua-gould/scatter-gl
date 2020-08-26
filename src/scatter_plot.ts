@@ -87,11 +87,10 @@ export interface ScatterPlotParams {
 export class ScatterPlot {
     private container: HTMLElement;
     private styles: Styles;
-    private clickCallback: (point: number | null) => void = () => {
+    private hoverPoint: Point = {x: 0, y: 0};
+    private hoverCallback: (point: Point | null) => void = () => {
     };
-    private hoverCallback: (point: number | null) => void = () => {
-    };
-    private selectCallback: (point: number[], boundingBox?: ScatterBoundingBox,) => void = () => {
+    private boxCallback: (boundingBox?: ScatterBoundingBox,) => void = () => {
     };
     private lassoCallback: (points: Point[]) => void = () => {
     };
@@ -111,7 +110,7 @@ export class ScatterPlot {
     private renderer: THREE.WebGL1Renderer;
 
     private scene: THREE.Scene;
-    private pickingTexture = new THREE.WebGLRenderTarget(0, 0);
+
     private light: THREE.PointLight;
 
     private camera!: THREE.Camera;
@@ -127,9 +126,7 @@ export class ScatterPlot {
     private polylineOpacities = new Float32Array(0);
     private polylineWidths = new Float32Array(0);
 
-    private interactive = true;
     private selecting = false;
-    private nearestPoint: number | null = null;
     private mouseIsDown = false;
     private isDragSequence = false;
     private rectangleSelector: ScatterPlotRectangleSelector;
@@ -137,7 +134,6 @@ export class ScatterPlot {
     constructor(containerElement: HTMLElement, params: ScatterPlotParams, premultipliedAlpha: boolean = false) {
         this.container = containerElement;
         this.styles = params.styles;
-        this.setParameters(params);
 
         this.computeLayoutValues();
 
@@ -166,21 +162,13 @@ export class ScatterPlot {
         this.resize();
     }
 
-    private setParameters(p: ScatterPlotParams) {
-        if (p.onClick !== undefined) this.clickCallback = p.onClick;
-        if (p.onHover !== undefined) this.hoverCallback = p.onHover;
-        if (p.onSelect !== undefined) this.selectCallback = p.onSelect;
-        if (p.selectEnabled !== undefined) this.selectEnabled = p.selectEnabled;
-        if (p.interactive !== undefined) this.interactive = p.interactive;
-    }
-
     private addInteractionListeners() {
         this.container.addEventListener('mouseout', this.onMouseOut.bind(this));
         this.container.addEventListener('mouseenter', this.onMouseOut.bind(this));
         this.container.addEventListener('mousemove', this.onMouseMove.bind(this));
         this.container.addEventListener('mousedown', this.onMouseDown.bind(this));
         this.container.addEventListener('mouseup', this.onMouseUp.bind(this));
-        this.container.addEventListener('click', this.onClick.bind(this));
+        // this.container.addEventListener('click', this.onClick.bind(this));
         window.addEventListener('keydown', this.onKeyDown.bind(this), false);
         window.addEventListener('keyup', this.onKeyUp.bind(this), false);
     }
@@ -365,19 +353,19 @@ export class ScatterPlot {
         }
     }
 
-    private onClick(e: MouseEvent | null, notify = true) {
-        if (e && this.selecting) {
-            return;
-        }
-        // Only call event handlers if the click originated from the scatter plot.
-        if (!this.isDragSequence && notify) {
-            const selection = this.nearestPoint != null ? [this.nearestPoint] : [];
-            this.selectCallback(selection);
-            this.clickCallback(this.nearestPoint);
-        }
-        this.isDragSequence = false;
-        this.render();
-    }
+    // private onClick(e: MouseEvent | null, notify = true) {
+    //     if (e && this.selecting) {
+    //         return;
+    //     }
+    //     // Only call event handlers if the click originated from the scatter plot.
+    //     if (!this.isDragSequence && notify) {
+    //         const selection = this.nearestPoint != null ? [this.nearestPoint] : [];
+    //         this.selectCallback(selection);
+    //         this.clickCallback(this.nearestPoint);
+    //     }
+    //     this.isDragSequence = false;
+    //     this.render();
+    // }
 
     private onMouseDown(e: MouseEvent) {
         this.isDragSequence = false;
@@ -385,7 +373,7 @@ export class ScatterPlot {
         if (this.selecting) {
             this.orbitCameraControls.enabled = false;
             this.rectangleSelector.onMouseDown(e.offsetX, e.offsetY);
-            this.setNearestPointToMouse(e);
+            // this.setNearestPointToMouse(e);
         } else if (
             !e.ctrlKey &&
             this.sceneIs3D() &&
@@ -417,7 +405,6 @@ export class ScatterPlot {
         this.mouseIsDown = false;
     }
 
-    private lastHovered: number | null = null;
 
     /**
      * When the mouse moves, find the nearest point (if any) and send it to the
@@ -430,21 +417,17 @@ export class ScatterPlot {
             this.rectangleSelector.onMouseMove(e.offsetX, e.offsetY);
             // this.render();
         } else if (!this.mouseIsDown) {
-            this.setNearestPointToMouse(e);
-            if (this.nearestPoint != this.lastHovered) {
-                this.lastHovered = this.nearestPoint;
-                this.hoverCallback(this.nearestPoint);
-            }
+            // this.setNearestPointToMouse(e);
+            this.hoverPoint.x = e.offsetX;
+            this.hoverPoint.y = e.offsetY;
+            this.hoverCallback(this.hoverPoint);
+
         }
     }
 
     private onMouseOut(e: MouseEvent) {
         if (!this.selecting) {
-            this.nearestPoint = null;
-            if (this.nearestPoint != this.lastHovered) {
-                this.lastHovered = this.nearestPoint;
-                this.hoverCallback(this.nearestPoint);
-            }
+            this.hoverCallback(null);
         }
     }
 
@@ -479,87 +462,15 @@ export class ScatterPlot {
         }
     }
 
-    /**
-     * Returns a list of indices of points in a bounding box from the picking
-     * texture.
-     * @param boundingBox The bounding box to select from.
-     */
-    private getPointIndicesFromPickingTexture(
-        boundingBox: ScatterBoundingBox
-    ): number[] {
-        if (this.worldSpacePointPositions == null) {
-            return [];
-        }
-
-        const pointCount = this.worldSpacePointPositions.length / 3;
-        const dpr = window.devicePixelRatio || 1;
-        const x = Math.floor(boundingBox.x * dpr);
-        const y = Math.floor(boundingBox.y * dpr);
-        const width = Math.max(Math.floor(boundingBox.width * dpr), 1);
-        const height = Math.max(Math.floor(boundingBox.height * dpr), 1);
-
-        // Create buffer for reading all of the pixels from the texture.
-        let pixelBuffer = new Uint8Array(width * height * 4);
-
-        // Read the pixels from the bounding box.
-        this.renderer.readRenderTargetPixels(
-            this.pickingTexture,
-            x,
-            this.pickingTexture.height - y,
-            width,
-            height,
-            pixelBuffer
-        );
-
-        // Keep a flat list of each point and whether they are selected or not. This
-        // approach is more efficient than using an object keyed by the index.
-        let pointIndicesSelection = new Uint8Array(
-            this.worldSpacePointPositions.length
-        );
-        for (let i = 0; i < width * height; i++) {
-            const id =
-                (pixelBuffer[i * 4] << 16) |
-                (pixelBuffer[i * 4 + 1] << 8) |
-                pixelBuffer[i * 4 + 2];
-            if (id !== 0xffffff && id < pointCount) {
-                pointIndicesSelection[id] = 1;
-            }
-        }
-        let pointIndices: number[] = [];
-        for (let i = 0; i < pointIndicesSelection.length; i++) {
-            if (pointIndicesSelection[i] === 1) {
-                pointIndices.push(i);
-            }
-        }
-
-        return pointIndices;
-    }
 
     private selectBoundingBox(boundingBox: ScatterBoundingBox) {
-        let pointIndices = this.getPointIndicesFromPickingTexture(boundingBox);
-        this.selectCallback(pointIndices, boundingBox);
+        this.boxCallback(boundingBox);
     }
 
     private selectLasso(points: Point[]) {
         this.lassoCallback(points);
     }
 
-    private setNearestPointToMouse(e: MouseEvent) {
-        if (this.pickingTexture == null) {
-            this.nearestPoint = null;
-            return;
-        }
-
-        const boundingBox: ScatterBoundingBox = {
-            x: e.offsetX,
-            y: e.offsetY,
-            width: 1,
-            height: 1,
-        };
-
-        const pointIndices = this.getPointIndicesFromPickingTexture(boundingBox);
-        this.nearestPoint = pointIndices.length ? pointIndices[0] : null;
-    }
 
     private computeLayoutValues(): Point2D {
         this.width = this.container.offsetWidth;
@@ -725,19 +636,6 @@ export class ScatterPlot {
             this.polylineWidths
         );
 
-        // Render first pass to picking target. This render fills pickingTexture
-        // with colors that are actually point ids, so that sampling the texture at
-        // the mouse's current x,y coordinates will reveal the data point that the
-        // mouse is over.
-        if (this.interactive) {
-            this.visualizers.forEach(v => v.onPickingRender(rc));
-            const axes = this.remove3dAxesFromScene();
-            this.renderer.setRenderTarget(this.pickingTexture);
-            this.renderer.render(this.scene, this.camera);
-            if (axes != null) {
-                this.scene.add(axes);
-            }
-        }
 
         // Render second pass to color buffer, to be displayed on the canvas.
         this.visualizers.forEach(v => v.onRender(rc));
@@ -814,18 +712,6 @@ export class ScatterPlot {
         this.renderer.setPixelRatio(dpr);
         this.renderer.setSize(newW, newH);
 
-        // the picking texture needs to be exactly the same as the render texture.
-        {
-            const renderCanvasSize = new THREE.Vector2();
-            this.renderer.getSize(renderCanvasSize);
-            const pixelRatio = this.renderer.getPixelRatio();
-            this.pickingTexture = new THREE.WebGLRenderTarget(
-                renderCanvasSize.width * pixelRatio,
-                renderCanvasSize.height * pixelRatio
-            );
-
-            this.pickingTexture.texture.minFilter = THREE.LinearFilter;
-        }
 
         this.visualizers.forEach(v => v.onResize(newW, newH));
 
@@ -838,8 +724,4 @@ export class ScatterPlot {
         this.onCameraMoveListeners.push(listener);
     }
 
-    clickOnPoint(pointIndex: number) {
-        this.nearestPoint = pointIndex;
-        this.onClick(null, false);
-    }
 }

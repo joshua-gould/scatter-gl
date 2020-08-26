@@ -34,6 +34,7 @@ export class ScatterPlotVisualizerCanvasLabels
     private labelsActive: boolean = true;
     private labelStrings: string[] = [];
     private fillStyle: string = 'black';
+    private shadowColor: string = 'white';
     private fontSize: number = 14;
 
 
@@ -69,6 +70,8 @@ export class ScatterPlotVisualizerCanvasLabels
         context.fillStyle = this.fillStyle; // this.styles.label3D.color;
         context.font = this.fontSize + 'px Roboto Condensed';
         context.textAlign = "center";
+        context.shadowColor = this.shadowColor;
+        context.shadowBlur = 4;
         const widthHalf = (this.canvas.width / dpr) / 2;
         const heightHalf = (this.canvas.height / dpr) / 2;
         for (let i = 0, k = 0; i < labelStrings.length; i++, k += 3) {
