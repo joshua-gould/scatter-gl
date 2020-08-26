@@ -35,7 +35,7 @@ export class ScatterPlotVisualizerCanvasLabels
     private labelStrings: string[] = [];
     private fillStyle: string = 'black';
     private shadowColor: string = 'white';
-    private fontSize: number = 14;
+    private font: string = 'bold 14px Roboto Condensed';
 
 
     constructor(container: HTMLElement, private styles: Styles) {
@@ -68,7 +68,7 @@ export class ScatterPlotVisualizerCanvasLabels
         const context = this.gc;
         context.scale(dpr, dpr);
         context.fillStyle = this.fillStyle; // this.styles.label3D.color;
-        context.font = this.fontSize + 'px Roboto Condensed';
+        context.font = this.font;
         context.textAlign = "center";
         context.shadowColor = this.shadowColor;
         context.shadowBlur = 4;
