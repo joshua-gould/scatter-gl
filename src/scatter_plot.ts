@@ -659,7 +659,6 @@ export class ScatterPlot {
     setActiveVisualizers(visualizers: ScatterPlotVisualizer[]) {
         this.visualizers.forEach(visualizer => {
             if (visualizers.indexOf(visualizer) === -1) {
-                console.log('dispose ' + visualizer.id);
                 visualizer.dispose();
             }
         });
