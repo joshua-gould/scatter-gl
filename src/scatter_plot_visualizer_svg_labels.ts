@@ -80,6 +80,7 @@ export class ScatterPlotVisualizerSvgLabels
                 'http://www.w3.org/2000/svg',
                 'text'
             );
+            label.setAttribute('dominant-baseline', "middle");
             label.setAttribute('text-anchor', "middle");
             label.style.textShadow = this.shadowColor + ' -2px -2px 0px, ' + this.shadowColor +
                 ' -2px 2px 0px, ' + this.shadowColor + ' 2px -2px 0px, ' + this.shadowColor + ' 2px 2px 0px';
