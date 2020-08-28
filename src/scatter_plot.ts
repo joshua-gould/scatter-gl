@@ -720,6 +720,35 @@ export class ScatterPlot {
         }
     }
 
+    updateFromCameraDef(cameraDef: any) {
+        this.camera.position.set(
+            cameraDef.position[0],
+            cameraDef.position[1],
+            cameraDef.position[2]
+        );
+        const at = new THREE.Vector3(
+            cameraDef.target[0],
+            cameraDef.target[1],
+            cameraDef.target[2]
+        );
+        this.camera.lookAt(at);
+
+        // @ts-ignore
+        this.camera.zoom = cameraDef.zoom;
+        // @ts-ignore
+        this.camera.updateProjectionMatrix();
+    }
+
+    getCameraDef() {
+        const def: any = {};
+        const pos = this.camera.position;
+        const tgt = this.orbitCameraControls.target;
+        def.position = [pos.x, pos.y, pos.z];
+        def.target = [tgt.x, tgt.y, tgt.z];
+        def.zoom = (this.camera as any).zoom;
+        return def;
+    }
+
     onCameraMove(listener: OnCameraMoveListener) {
         this.onCameraMoveListeners.push(listener);
     }
