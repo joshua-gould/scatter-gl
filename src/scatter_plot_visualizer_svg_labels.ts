@@ -32,6 +32,7 @@ export class ScatterPlotVisualizerSvgLabels
     private labelStrings: string[] = [];
     private fillStyle: string = 'black';
     private shadowColor: string = 'white';
+    private shadowStroke: number = 4;
     private font: string = 'bold 14px Roboto Condensed';
     private svgElement: SVGSVGElement;
 
@@ -60,6 +61,16 @@ export class ScatterPlotVisualizerSvgLabels
         this.worldSpacePointPositions = positions;
     }
 
+    private createLabel(pos: THREE.Vector3, text: string) {
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('dominant-baseline', "middle");
+        label.setAttribute('text-anchor', "middle");
+        label.setAttribute('x', '' + pos.x)
+        label.setAttribute('y', '' + pos.y)
+        label.innerHTML = text;
+        return label;
+    }
+
     private draw(rc: RenderContext) {
 
         const camera = rc.camera;
@@ -80,17 +91,17 @@ export class ScatterPlotVisualizerSvgLabels
             pos.project(camera);
             pos.x = (pos.x * widthHalf) + widthHalf;
             pos.y = -(pos.y * heightHalf) + heightHalf;
-            const label = document.createElementNS(
-                'http://www.w3.org/2000/svg',
-                'text'
-            );
-            label.setAttribute('dominant-baseline', "middle");
-            label.setAttribute('text-anchor', "middle");
-            label.style.textShadow = textShadow;
-            label.innerHTML = labelStrings[i];
+
+            // label.style.textShadow = textShadow; bug on safari
+            const shadowLabel = this.createLabel(pos, labelStrings[i]);
+            shadowLabel.style.fill = 'none';
+            shadowLabel.style.stroke = this.shadowColor;
+            console.log(this.shadowStroke)
+            shadowLabel.style.strokeWidth = this.shadowStroke + 'px';
+            this.svgElement.appendChild(shadowLabel);
+
+            const label = this.createLabel(pos, labelStrings[i]);
             label.style.fill = this.fillStyle;
-            label.setAttribute('x', '' + pos.x)
-            label.setAttribute('y', '' + pos.y)
             this.svgElement.appendChild(label);
         }
     }
