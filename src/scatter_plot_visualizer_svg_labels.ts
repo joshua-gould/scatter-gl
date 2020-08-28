@@ -66,9 +66,13 @@ export class ScatterPlotVisualizerSvgLabels
         const positions = this.worldSpacePointPositions;
         const pos = new THREE.Vector3();
         const labelStrings = this.labelStrings;
-        const widthHalf = (this.svgElement.clientWidth) / 2;
-        const heightHalf = (this.svgElement.clientHeight) / 2;
+        // @ts-ignore
+        const widthHalf = (this.svgElement.parentElement.clientWidth) / 2;
+        // @ts-ignore
+        const heightHalf = (this.svgElement.parentElement.clientHeight) / 2;
         this.svgElement.style.font = this.font;
+        const textShadow = this.shadowColor + ' -2px -2px 0px, ' + this.shadowColor +
+            ' -2px 2px 0px, ' + this.shadowColor + ' 2px -2px 0px, ' + this.shadowColor + ' 2px 2px 0px';
         for (let i = 0, k = 0; i < labelStrings.length; i++, k += 3) {
             pos.x = positions[k];
             pos.y = positions[k + 1];
@@ -82,8 +86,7 @@ export class ScatterPlotVisualizerSvgLabels
             );
             label.setAttribute('dominant-baseline', "middle");
             label.setAttribute('text-anchor', "middle");
-            label.style.textShadow = this.shadowColor + ' -2px -2px 0px, ' + this.shadowColor +
-                ' -2px 2px 0px, ' + this.shadowColor + ' 2px -2px 0px, ' + this.shadowColor + ' 2px 2px 0px';
+            label.style.textShadow = textShadow;
             label.innerHTML = labelStrings[i];
             label.style.fill = this.fillStyle;
             label.setAttribute('x', '' + pos.x)
@@ -93,8 +96,7 @@ export class ScatterPlotVisualizerSvgLabels
     }
 
     onResize(newWidth: number, newHeight: number) {
-        this.svgElement.style.width = newWidth + 'px';
-        this.svgElement.style.height = newHeight + 'px';
+
     }
 
     onRender(rc: RenderContext) {
