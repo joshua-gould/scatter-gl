@@ -96,7 +96,6 @@ export class ScatterPlotVisualizerSvgLabels
             const shadowLabel = this.createLabel(pos, labelStrings[i]);
             shadowLabel.style.fill = 'none';
             shadowLabel.style.stroke = this.shadowColor;
-            console.log(this.shadowStroke)
             shadowLabel.style.strokeWidth = this.shadowStroke + 'px';
             this.svgElement.appendChild(shadowLabel);
 
