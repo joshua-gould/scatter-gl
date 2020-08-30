@@ -51,7 +51,7 @@ const START_CAMERA_TARGET_2D = new THREE.Vector3(0, 0, 0);
 
 const ORBIT_MOUSE_ROTATION_SPEED = 1;
 const ORBIT_ANIMATION_ROTATION_CYCLE_IN_SECONDS = 7;
-const ORBIT_ZOOM_SPEED = 0.125;
+const ORBIT_ZOOM_SPEED = 1.125;
 
 export type OnCameraMoveListener = (
     cameraPosition: THREE.Vector3,
