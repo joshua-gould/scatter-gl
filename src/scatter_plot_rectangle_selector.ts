@@ -90,6 +90,7 @@ export class ScatterPlotRectangleSelector {
         );
 
         [this.rectElement, this.lassoElement].forEach(element => {
+            element.style.pointerEvents = 'none';
             element.style.stroke = styles.select.stroke;
             element.style.strokeDasharray = styles.select.strokeDashArray;
             element.style.strokeWidth = `${styles.select.strokeWidth}`;
