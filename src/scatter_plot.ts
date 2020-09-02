@@ -107,7 +107,7 @@ export class ScatterPlot {
 
     private interactionMode = InteractionMode.PAN;
 
-    private renderer: THREE.WebGL1Renderer;
+    private renderer: THREE.WebGLRenderer;
 
     private scene: THREE.Scene;
 
@@ -138,7 +138,7 @@ export class ScatterPlot {
         this.computeLayoutValues();
 
         this.scene = new THREE.Scene();
-        this.renderer = new THREE.WebGL1Renderer({
+        this.renderer = new THREE.WebGLRenderer({
             alpha: true,
             premultipliedAlpha: premultipliedAlpha,
             antialias: false,

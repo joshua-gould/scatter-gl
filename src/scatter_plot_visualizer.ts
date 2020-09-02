@@ -39,12 +39,7 @@ export interface ScatterPlotVisualizer {
    * Called when the positions of the scatter plot points have changed.
    */
   onPointPositionsChanged(newWorldSpacePointPositions: Float32Array): void;
-  /**
-   * Called immediately before the main scatter plot performs a picking
-   * (selection) render. Set up render state for any geometry to use picking IDs
-   * instead of visual colors.
-   */
-  onPickingRender(renderContext: RenderContext): void;
+
   /**
    * Called immediately before the main scatter plot performs a color (visual)
    * render. Set up render state, lights, etc here.
