@@ -17,15 +17,15 @@ limitations under the License.
 
 import * as THREE from 'three';
 import {ScatterPlotVisualizer} from './scatter_plot_visualizer';
-import {CameraType, RenderContext} from './render';
+import { RenderContext} from './render';
 import {Styles} from './styles';
 import * as util from './util';
 import {
-  RGB_NUM_ELEMENTS,
   RGBA_NUM_ELEMENTS,
   INDEX_NUM_ELEMENTS,
   XYZ_NUM_ELEMENTS,
 } from './constants';
+import {Texture} from "three";
 
 export interface SpriteSheetParams {
   spritesheetImage: HTMLImageElement | string;
@@ -34,14 +34,14 @@ export interface SpriteSheetParams {
   onImageLoad: () => void;
 }
 
-const makeVertexShader = (minPointSize: number) => `
+const VEREX_SHADER = `
     // Index of the specific vertex (passed in as bufferAttribute), and the
     // variable that will be used to pass it to the fragment shader.
     attribute float spriteIndex;
     attribute vec4 color;
     attribute float scaleFactor;
 
-    varying vec2 xyIndex;
+  
     varying vec4 vColor;
 
     uniform bool sizeAttenuation;
@@ -54,8 +54,6 @@ const makeVertexShader = (minPointSize: number) => `
     void main() {
       // Pass index and color values to fragment shader.
       vColor = color;
-      xyIndex = vec2(mod(spriteIndex, spritesPerRow),
-                floor(spriteIndex / spritesPerColumn));
 
       // Transform current vertex by modelViewMatrix (model world position and
       // camera world position matrix).
@@ -85,8 +83,6 @@ const makeVertexShader = (minPointSize: number) => `
         outputPointSize = pointSize * scale;
       }
       gl_PointSize = outputPointSize * scaleFactor;
-      // gl_PointSize =
-      //   max(outputPointSize * scaleFactor, ${minPointSize.toFixed(1)});
     }`;
 
 const FRAGMENT_SHADER_POINT_TEST_CHUNK = `
@@ -111,13 +107,8 @@ const FRAGMENT_SHADER_POINT_TEST_CHUNK = `
   `;
 
 const FRAGMENT_SHADER = `
-    varying vec2 xyIndex;
+    
     varying vec4 vColor;
-
-    uniform sampler2D texture;
-    uniform float spritesPerRow;
-    uniform float spritesPerColumn;
-    uniform bool isImage;
 
     ${THREE.ShaderChunk['common']}
     ${FRAGMENT_SHADER_POINT_TEST_CHUNK}
@@ -127,44 +118,15 @@ const FRAGMENT_SHADER = `
     uniform float fogFar;
 
     void main() {
-      if (isImage) {
-        // Coordinates of the vertex within the entire sprite image.
-        vec2 coords =
-          (gl_PointCoord + xyIndex) / vec2(spritesPerRow, spritesPerColumn);
-        gl_FragColor = vColor * texture2D(texture, coords);
-      } else {
-        bool inside = point_in_unit_circle(gl_PointCoord);
-        if (!inside) {
-          discard;
-        }
-        gl_FragColor = vColor;
+      bool inside = point_in_unit_circle(gl_PointCoord);
+      if (!inside) {
+        discard;
       }
+      gl_FragColor = vColor;
       float fogFactor = smoothstep( fogNear, fogFar, fogDepth );
       gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );
     }`;
 
-const FRAGMENT_SHADER_PICKING = `
-    varying vec2 xyIndex;
-    varying vec4 vColor;
-    uniform bool isImage;
-
-    ${FRAGMENT_SHADER_POINT_TEST_CHUNK}
-
-    varying float fogDepth;
-
-    void main() {
-      xyIndex; // Silence 'unused variable' warning.
-      fogDepth; // Silence 'unused variable' warning.
-      if (isImage) {
-        gl_FragColor = vColor;
-      } else {
-        bool inside = point_in_unit_circle(gl_PointCoord);
-        if (!inside) {
-          discard;
-        }
-        gl_FragColor = vColor;
-      }
-    }`;
 
 /**
  * Uses GL point sprites, either generated or from a spritesheet image to
@@ -175,38 +137,17 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
 
   private scene!: THREE.Scene;
   private fog!: THREE.Fog;
-  private texture!: THREE.Texture;
-
-  private standinTextureForPoints: THREE.Texture;
-  private spriteIndexBufferAttribute!: THREE.BufferAttribute;
   private renderMaterial: THREE.ShaderMaterial;
-  private pickingMaterial: THREE.ShaderMaterial;
-
-  private isSpriteSheetMode = false;
-  private spriteSheetParams!: SpriteSheetParams;
-  private spriteSheetImage!: HTMLImageElement;
-  private spritesPerRow = 0;
-  private spritesPerColumn = 0;
-  private spriteDimensions = [0, 0];
-
   private points!: THREE.Points;
   private worldSpacePointPositions = new Float32Array(0);
-  private pickingColors = new Float32Array(0);
   private renderColors = new Float32Array(0);
+  private standinTextureForPoints: Texture;
 
   constructor(private styles: Styles, spriteSheetParams?: SpriteSheetParams) {
-    this.standinTextureForPoints = util.createTextureFromCanvas(
-      document.createElement('canvas')
-    );
-
-    if (spriteSheetParams) {
-      this.spriteSheetParams = spriteSheetParams;
-      this.setSpriteSheet(spriteSheetParams);
-      this.isSpriteSheetMode = true;
-    }
-
     this.renderMaterial = this.createRenderMaterial();
-    this.pickingMaterial = this.createPickingMaterial();
+    this.standinTextureForPoints = util.createTextureFromCanvas(
+        document.createElement('canvas')
+    );
   }
 
   private createUniforms(): any {
@@ -224,11 +165,11 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
   }
 
   private createRenderMaterial(): THREE.ShaderMaterial {
-    const {isSpriteSheetMode} = this;
+
     const uniforms = this.createUniforms();
     return new THREE.ShaderMaterial({
       uniforms: uniforms,
-      vertexShader: makeVertexShader(this.styles.sprites.minPointSize),
+      vertexShader: VEREX_SHADER,
       fragmentShader: FRAGMENT_SHADER,
       transparent: true,
       depthFunc: THREE.LessDepth,
@@ -237,47 +178,12 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
     });
   }
 
-  private createPickingMaterial(): THREE.ShaderMaterial {
-    const uniforms = this.createUniforms();
-    return new THREE.ShaderMaterial({
-      uniforms: uniforms,
-      vertexShader: makeVertexShader(this.styles.sprites.minPointSize),
-      fragmentShader: FRAGMENT_SHADER_PICKING,
-      transparent: true,
-      depthTest: true,
-      depthWrite: true,
-      fog: false,
-      blending: THREE.NormalBlending,
-    });
-  }
 
-  /**
-   * Create points, set their locations and actually instantiate the
-   * geometry.
-   */
-  private createPointSprites(scene: THREE.Scene, positions: Float32Array) {
-    const pointCount =
-      positions != null ? positions.length / XYZ_NUM_ELEMENTS : 0;
-    const geometry = this.createGeometry(pointCount);
 
-    this.fog = new THREE.Fog(0xffffff); // unused value, gets overwritten.
 
-    this.points = new THREE.Points(geometry, this.renderMaterial);
-    this.points.frustumCulled = false;
-    if (this.spriteIndexBufferAttribute != null) {
-      (this.points.geometry as THREE.BufferGeometry).setAttribute(
-        'spriteIndex',
-        this.spriteIndexBufferAttribute
-      );
-    }
-    scene.add(this.points);
-  }
 
   private calculatePointSize(sceneIs3D: boolean): number {
-    const {imageSize} = this.styles.sprites;
-    if (this.texture) {
-      return sceneIs3D ? imageSize : this.spriteDimensions[0];
-    }
+
     const n =
       this.worldSpacePointPositions != null
         ? this.worldSpacePointPositions.length / XYZ_NUM_ELEMENTS
@@ -291,23 +197,24 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
   }
 
   /**
+   * Create points, set their locations and actually instantiate the
+   * geometry.
+   */
+  private createPointSprites(scene: THREE.Scene, positions: Float32Array) {
+    const pointCount =
+        positions != null ? positions.length / XYZ_NUM_ELEMENTS : 0;
+    const geometry = this.createGeometry(pointCount);
+
+    this.fog = new THREE.Fog(0xffffff); // unused value, gets overwritten.
+    this.points = new THREE.Points(geometry, this.renderMaterial);
+    this.points.frustumCulled = false;
+    scene.add(this.points);
+  }
+  /**
    * Set up buffer attributes to be used for the points/images.
    */
   private createGeometry(pointCount: number): THREE.BufferGeometry {
     const n = pointCount;
-
-    // Fill pickingColors with each point's unique id as its color.
-    this.pickingColors = new Float32Array(n * RGBA_NUM_ELEMENTS);
-    {
-      let dst = 0;
-      for (let i = 0; i < n; i++) {
-        const c = new THREE.Color(i);
-        this.pickingColors[dst++] = c.r;
-        this.pickingColors[dst++] = c.g;
-        this.pickingColors[dst++] = c.b;
-        this.pickingColors[dst++] = 1;
-      }
-    }
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute(
@@ -362,52 +269,14 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
   }
 
   private disposeSpriteSheet() {
-    if (this.texture) {
-      this.texture.dispose();
-    }
-    (this.texture as any) = null;
+
     (this.renderMaterial as any) = null;
-    (this.pickingMaterial as any) = null;
-    (this.spriteSheetImage as any) = null;
   }
 
   setScene(scene: THREE.Scene) {
     this.scene = scene;
   }
 
-  private setSpriteSheet(spriteSheetParams: SpriteSheetParams) {
-    const {spriteDimensions, spriteIndices, onImageLoad} = spriteSheetParams;
-    let spriteSheet = spriteSheetParams.spritesheetImage;
-
-    // Load the sprite sheet as an image if a URL is supplied
-    if (typeof spriteSheet === 'string') {
-      const spriteSheetUrl = spriteSheet;
-      spriteSheet = new Image();
-      spriteSheet.src = spriteSheetUrl;
-    }
-    this.spriteSheetImage = spriteSheet as HTMLImageElement;
-
-    // Create texture from sprite sheet image
-    this.texture = util.createTextureFromImage(this.spriteSheetImage, () => {
-      // Set the sprites per row uniforms when the image is finally loaded
-      this.spritesPerRow = this.spriteSheetImage.width / spriteDimensions[0];
-      this.spritesPerColumn =
-        this.spriteSheetImage.height / spriteDimensions[1];
-      onImageLoad();
-    });
-    this.spriteDimensions = spriteDimensions;
-    this.spriteIndexBufferAttribute = new THREE.BufferAttribute(
-      spriteIndices,
-      INDEX_NUM_ELEMENTS
-    );
-
-    if (this.points != null) {
-      (this.points.geometry as THREE.BufferGeometry).setAttribute(
-        'spriteIndex',
-        this.spriteIndexBufferAttribute
-      );
-    }
-  }
 
   onPointPositionsChanged(newPositions: Float32Array) {
     if (this.points != null) {
@@ -417,17 +286,10 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
     }
 
     this.worldSpacePointPositions = newPositions;
-
     if (this.points == null) {
       this.createPointSprites(this.scene, newPositions);
     }
-
-    if (this.spriteSheetParams) {
-      this.setSpriteSheet(this.spriteSheetParams);
-    }
-
     this.renderMaterial = this.createRenderMaterial();
-    this.pickingMaterial = this.createPickingMaterial();
 
     const positions = (this.points
       .geometry as THREE.BufferGeometry).getAttribute(
@@ -438,33 +300,6 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
     positions.needsUpdate = true;
   }
 
-  onPickingRender(rc: RenderContext) {
-    const sceneIs3D: boolean = rc.cameraType === CameraType.Perspective;
-
-    this.pickingMaterial.uniforms.spritesPerRow.value = this.spritesPerRow;
-    this.pickingMaterial.uniforms.spritesPerRow.value = this.spritesPerColumn;
-    this.pickingMaterial.uniforms.sizeAttenuation.value = sceneIs3D;
-    this.pickingMaterial.uniforms.pointSize.value = this.calculatePointSize(
-      sceneIs3D
-    );
-    this.points.material = this.pickingMaterial;
-
-    let colors = (this.points.geometry as THREE.BufferGeometry).getAttribute(
-      'color'
-    ) as THREE.BufferAttribute;
-    colors.array = this.pickingColors;
-    colors.count = this.pickingColors.length / RGBA_NUM_ELEMENTS;
-    colors.needsUpdate = true;
-
-    let scaleFactors = (this.points
-      .geometry as THREE.BufferGeometry).getAttribute(
-      'scaleFactor'
-    ) as THREE.BufferAttribute;
-    scaleFactors.array = rc.pointScaleFactors;
-    scaleFactors.count = rc.pointScaleFactors.length;
-    scaleFactors.count = rc.pointScaleFactors.length / INDEX_NUM_ELEMENTS;
-    scaleFactors.needsUpdate = true;
-  }
 
   onRender(rc: RenderContext) {
     const sceneIs3D: boolean = rc.camera instanceof THREE.PerspectiveCamera;
@@ -478,11 +313,7 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
     this.renderMaterial.uniforms.fogColor.value = this.scene.fog.color;
     this.renderMaterial.uniforms.fogNear.value = this.fog.near;
     this.renderMaterial.uniforms.fogFar.value = this.fog.far;
-    this.renderMaterial.uniforms.spritesPerRow.value = this.spritesPerRow;
-    this.renderMaterial.uniforms.spritesPerColumn.value = this.spritesPerColumn;
-    this.renderMaterial.uniforms.isImage.value = this.texture != null;
-    this.renderMaterial.uniforms.texture.value =
-      this.texture != null ? this.texture : this.standinTextureForPoints;
+    this.renderMaterial.uniforms.texture.value = this.standinTextureForPoints;
     this.renderMaterial.uniforms.sizeAttenuation.value = sceneIs3D;
     this.renderMaterial.uniforms.pointSize.value = this.calculatePointSize(
       sceneIs3D
