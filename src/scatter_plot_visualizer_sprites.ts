@@ -59,7 +59,7 @@ const VEREX_SHADER = `
       gl_Position = projectionMatrix * cameraSpacePos;
 
       // Create size attenuation (if we're in 3D mode) by making the size of
-      // each point inversly proportional to its distance to the camera.
+      // each point inversely proportional to its distance to the camera.
       float outputPointSize = pointSize;
       if (sizeAttenuation) {
         outputPointSize = -pointSize / cameraSpacePos.z;
