@@ -16,16 +16,12 @@ limitations under the License.
 ==============================================================================*/
 
 import * as THREE from 'three';
+import {Texture} from 'three';
 import {ScatterPlotVisualizer} from './scatter_plot_visualizer';
-import { RenderContext} from './render';
+import {RenderContext} from './render';
 import {Styles} from './styles';
 import * as util from './util';
-import {
-  RGBA_NUM_ELEMENTS,
-  INDEX_NUM_ELEMENTS,
-  XYZ_NUM_ELEMENTS,
-} from './constants';
-import {Texture} from "three";
+import {INDEX_NUM_ELEMENTS, RGBA_NUM_ELEMENTS, XYZ_NUM_ELEMENTS,} from './constants';
 
 export interface SpriteSheetParams {
   spritesheetImage: HTMLImageElement | string;
@@ -41,14 +37,13 @@ const VEREX_SHADER = `
     attribute vec4 color;
     attribute float scaleFactor;
 
-  
     varying vec4 vColor;
 
     uniform bool sizeAttenuation;
     uniform float pointSize;
-    uniform float spritesPerRow;
-    uniform float spritesPerColumn;
-
+    uniform float zoomFactor;
+    uniform bool zoomFactorSpecified;
+    
     varying float fogDepth;
 
     void main() {
@@ -77,7 +72,11 @@ const VEREX_SHADER = `
         const float maxScale = 15.0;  // maximum scaling factor
         const float inSpeed = 0.02;  // enlarge speed when zooming in
         const float zoomOffset = 0.3;  // offset zoom pivot
-        float zoom = projectionMatrix[0][0] + zoomOffset;  // zoom pivot
+        float m = projectionMatrix[0][0];
+        if (zoomFactorSpecified) {
+          m = zoomFactor;
+        } 
+        float zoom = m + zoomOffset;  // zoom pivot
         float scale = zoom < 1. ? 1. + outNorm * atan(outSpeed * (zoom - 1.)) :
                       1. + 2. / PI * (maxScale - 1.) * atan(inSpeed * (zoom - 1.));
         outputPointSize = pointSize * scale;
@@ -142,6 +141,7 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
   private worldSpacePointPositions = new Float32Array(0);
   private renderColors = new Float32Array(0);
   private standinTextureForPoints: Texture;
+  private zoomFactor: number = NaN;
 
   constructor(private styles: Styles, spriteSheetParams?: SpriteSheetParams) {
     this.renderMaterial = this.createRenderMaterial();
@@ -153,8 +153,8 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
   private createUniforms(): any {
     return {
       texture: {type: 't'},
-      spritesPerRow: {type: 'f'},
-      spritesPerColumn: {type: 'f'},
+      zoomFactor: {type: 'f'},
+      zoomFactorSpecified: {type: 'bool'},
       fogColor: {type: 'c'},
       fogNear: {type: 'f'},
       fogFar: {type: 'f'},
@@ -315,6 +315,8 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
     this.renderMaterial.uniforms.fogFar.value = this.fog.far;
     this.renderMaterial.uniforms.texture.value = this.standinTextureForPoints;
     this.renderMaterial.uniforms.sizeAttenuation.value = sceneIs3D;
+    this.renderMaterial.uniforms.zoomFactor.value = this.zoomFactor;
+    this.renderMaterial.uniforms.zoomFactorSpecified.value = !isNaN(this.zoomFactor);
     this.renderMaterial.uniforms.pointSize.value = this.calculatePointSize(
       sceneIs3D
     );
