@@ -87,6 +87,7 @@ export interface ScatterPlotParams {
 export class ScatterPlot {
     private container: HTMLElement;
     private styles: Styles;
+    private interactive: boolean = true;
     private hoverPoint: Point = {x: 0, y: 0};
     private hoverCallback: (point: Point | null) => void = () => {
     };
@@ -129,11 +130,12 @@ export class ScatterPlot {
     private selecting = false;
     private mouseIsDown = false;
     private isDragSequence = false;
-    private rectangleSelector: ScatterPlotRectangleSelector;
+    private rectangleSelector!: ScatterPlotRectangleSelector;
 
     constructor(containerElement: HTMLElement, params: ScatterPlotParams, premultipliedAlpha: boolean = false) {
         this.container = containerElement;
         this.styles = params.styles;
+        this.interactive = params.interactive || false;
 
         this.computeLayoutValues();
 
@@ -150,13 +152,15 @@ export class ScatterPlot {
         this.light = new THREE.PointLight(0xffecbf, 1, 0);
         this.scene.add(this.light);
 
-        this.rectangleSelector = new ScatterPlotRectangleSelector(
-            this.container,
-            (boundingBox: ScatterBoundingBox) => this.selectBoundingBox(boundingBox),
-            points => this.selectLasso(points),
-            this.styles
-        );
-        this.addInteractionListeners();
+        if(params.interactive) {
+            this.rectangleSelector = new ScatterPlotRectangleSelector(
+                this.container,
+                (boundingBox: ScatterBoundingBox) => this.selectBoundingBox(boundingBox),
+                points => this.selectLasso(points),
+                this.styles
+            );
+            this.addInteractionListeners();
+        }
         this.setDimensions(3);
         this.makeCamera(params.camera);
         this.resize();
@@ -174,6 +178,9 @@ export class ScatterPlot {
     }
 
     private addCameraControlsEventListeners(cameraControls: any) {
+        if (!this.interactive) {
+            return;
+        }
         // Start is called when the user stars interacting with
         // controls.
         cameraControls.addEventListener('start', () => {
@@ -257,7 +264,9 @@ export class ScatterPlot {
             camera.updateProjectionMatrix();
         }
         this.camera = camera;
+
         this.makeOrbitControls(camera, true);
+
     }
 
     private makeCamera2D(cameraDef: CameraDef, w: number, h: number) {
@@ -334,11 +343,13 @@ export class ScatterPlot {
         } else {
             this.makeCamera3D(cameraDef, this.width, this.height);
         }
-        this.orbitCameraControls.minDistance = MIN_ZOOM;
-        this.orbitCameraControls.maxDistance = MAX_ZOOM;
-        this.orbitCameraControls.update();
-        if (this.orbitAnimationOnNextCameraCreation) {
-            this.startOrbitAnimation();
+        if (this.interactive) {
+            this.orbitCameraControls.minDistance = MIN_ZOOM;
+            this.orbitCameraControls.maxDistance = MAX_ZOOM;
+            this.orbitCameraControls.update();
+            if (this.orbitAnimationOnNextCameraCreation) {
+                this.startOrbitAnimation();
+            }
         }
     }
 
