@@ -48,12 +48,13 @@ export class ScatterPlotRectangleSelector {
     private lassoElement: SVGPathElement;
 
     private isMouseDown: boolean;
+    private appendToSelection: boolean;
     private startCoordinates: [number, number] = [0, 0];
     private lastBoundingBox!: ScatterBoundingBox;
     private lassoPath: Point[] = [];
     private selectionMode: SelectionMode = SelectionMode.BOX;
-    private selectionCallback: (boundingBox: ScatterBoundingBox) => void;
-    private lassoCallback: (lassoPoints: Point[]) => void;
+    private selectionCallback: (boundingBox: ScatterBoundingBox, appendToSelection: boolean) => void;
+    private lassoCallback: (lassoPoints: Point[], appendToSelection: boolean) => void;
 
     /**
      * @param container The container HTML element that the selection SVG rect
@@ -65,8 +66,8 @@ export class ScatterPlotRectangleSelector {
      */
     constructor(
         container: HTMLElement,
-        selectionCallback: (boundingBox: ScatterBoundingBox) => void,
-        lassoCallback: (lassoPoints: Point[]) => void,
+        selectionCallback: (boundingBox: ScatterBoundingBox, appendToSelection: boolean) => void,
+        lassoCallback: (lassoPoints: Point[], appendToSelection: boolean) => void,
         styles: Styles
     ) {
         this.svgElement = document.createElementNS(
@@ -102,14 +103,16 @@ export class ScatterPlotRectangleSelector {
         this.selectionCallback = selectionCallback;
         this.lassoCallback = lassoCallback;
         this.isMouseDown = false;
+        this.appendToSelection = false;
     }
 
     setSelectionMode(selectionMode: SelectionMode) {
         this.selectionMode = selectionMode;
     }
 
-    onMouseDown(offsetX: number, offsetY: number) {
+    onMouseDown(offsetX: number, offsetY: number, appendToSelection: boolean) {
         this.isMouseDown = true;
+        this.appendToSelection = appendToSelection;
         if (this.selectionMode === SelectionMode.BOX) {
             this.rectElement.style.display = 'block';
         } else {
@@ -179,10 +182,10 @@ export class ScatterPlotRectangleSelector {
         this.rectElement.setAttribute('width', '0');
         this.rectElement.setAttribute('height', '0');
         if (this.selectionMode === SelectionMode.BOX) {
-            this.selectionCallback(rect);
+            this.selectionCallback(rect, this.appendToSelection);
         } else {
             let points = this.lassoPath.length > 3 ? simplify(this.lassoPath, 0.1) : this.lassoPath;
-            this.lassoCallback(points);
+            this.lassoCallback(points, this.appendToSelection);
             this.lassoPath = [];
         }
     }

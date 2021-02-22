@@ -91,9 +91,9 @@ export class ScatterPlot {
     private hoverPoint: Point = {x: 0, y: 0};
     private hoverCallback: (point: Point | null) => void = () => {
     };
-    private boxCallback: (boundingBox?: ScatterBoundingBox,) => void = () => {
+    private boxCallback: (boundingBox: ScatterBoundingBox, appendToSelection: boolean) => void = () => {
     };
-    private lassoCallback: (points: Point[]) => void = () => {
+    private lassoCallback: (points: Point[], appendToSelection: boolean) => void = () => {
     };
     private selectEnabled = true;
 
@@ -152,11 +152,11 @@ export class ScatterPlot {
         this.light = new THREE.PointLight(0xffecbf, 1, 0);
         this.scene.add(this.light);
 
-        if(params.interactive) {
+        if (params.interactive) {
             this.rectangleSelector = new ScatterPlotRectangleSelector(
                 this.container,
-                (boundingBox: ScatterBoundingBox) => this.selectBoundingBox(boundingBox),
-                points => this.selectLasso(points),
+                (boundingBox: ScatterBoundingBox, appendToSelection: boolean) => this.selectBoundingBox(boundingBox, appendToSelection),
+                (points, appendToSelection) => this.selectLasso(points, appendToSelection),
                 this.styles
             );
             this.addInteractionListeners();
@@ -383,7 +383,7 @@ export class ScatterPlot {
         this.mouseIsDown = true;
         if (this.selecting) {
             this.orbitCameraControls.enabled = false;
-            this.rectangleSelector.onMouseDown(e.offsetX, e.offsetY);
+            this.rectangleSelector.onMouseDown(e.offsetX, e.offsetY, e.ctrlKey || e.metaKey);
             // this.setNearestPointToMouse(e);
         } else if (
             !e.ctrlKey &&
@@ -446,40 +446,40 @@ export class ScatterPlot {
     /** For using ctrl + left click as right click, and for circle select */
     private onKeyDown(e: KeyboardEvent) {
         // If ctrl is pressed, use left click to orbit
-        if (e.keyCode === CTRL_KEY && this.sceneIs3D()) {
+        if (this.sceneIs3D() && e.shiftKey) {
             this.orbitCameraControls.mouseButtons.ORBIT = THREE.MOUSE.RIGHT;
             this.orbitCameraControls.mouseButtons.PAN = THREE.MOUSE.LEFT;
         }
 
         // If shift is pressed, start selecting
-        if (e.keyCode === SHIFT_KEY && this.selectEnabled) {
-            this.selecting = true;
-            this.container.style.cursor = 'crosshair';
-        }
+        // if (e.keyCode === SHIFT_KEY && this.selectEnabled) {
+        //     this.selecting = true;
+        //     this.container.style.cursor = 'crosshair';
+        // }
     }
 
     /** For using ctrl + left click as right click, and for circle select */
     private onKeyUp(e: KeyboardEvent) {
-        if (e.keyCode === CTRL_KEY && this.sceneIs3D()) {
+        if (this.sceneIs3D() && e.shiftKey) {
             this.orbitCameraControls.mouseButtons.ORBIT = THREE.MOUSE.LEFT;
             this.orbitCameraControls.mouseButtons.PAN = THREE.MOUSE.RIGHT;
         }
 
         // If shift is released, stop selecting
-        if (e.keyCode === SHIFT_KEY && this.selectEnabled) {
-            this.selecting = false;
-            this.container.style.cursor = 'default';
-            this.render();
-        }
+        // if (e.keyCode === SHIFT_KEY && this.selectEnabled) {
+        //     this.selecting = false;
+        //     this.container.style.cursor = 'default';
+        //     this.render();
+        // }
     }
 
 
-    private selectBoundingBox(boundingBox: ScatterBoundingBox) {
-        this.boxCallback(boundingBox);
+    private selectBoundingBox(boundingBox: ScatterBoundingBox, appendToSelection: boolean) {
+        this.boxCallback(boundingBox, appendToSelection);
     }
 
-    private selectLasso(points: Point[]) {
-        this.lassoCallback(points);
+    private selectLasso(points: Point[], appendToSelection: boolean) {
+        this.lassoCallback(points, appendToSelection);
     }
 
 
