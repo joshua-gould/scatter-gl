@@ -155,8 +155,8 @@ export class ScatterPlot {
         if (params.interactive) {
             this.rectangleSelector = new ScatterPlotRectangleSelector(
                 this.container,
-                (boundingBox: ScatterBoundingBox, appendToSelection: boolean) => this.selectBoundingBox(boundingBox, appendToSelection),
-                (points, appendToSelection) => this.selectLasso(points, appendToSelection),
+                this.selectBoundingBox.bind(this),
+                this.selectLasso.bind(this),
                 this.styles
             );
             this.addInteractionListeners();
