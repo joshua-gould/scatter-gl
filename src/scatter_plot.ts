@@ -40,10 +40,6 @@ const PERSP_CAMERA_NEAR_CLIP_PLANE = 0.01;
 const PERSP_CAMERA_FAR_CLIP_PLANE = 100;
 const ORTHO_CAMERA_FRUSTUM_HALF_EXTENT = 1.2;
 
-// Key presses.
-const SHIFT_KEY = 16;
-const CTRL_KEY = 17;
-
 const START_CAMERA_POS_3D = new THREE.Vector3(0.45, 0.9, 1.6);
 const START_CAMERA_TARGET_3D = new THREE.Vector3(0, 0, 0);
 const START_CAMERA_POS_2D = new THREE.Vector3(0, 0, 4);
