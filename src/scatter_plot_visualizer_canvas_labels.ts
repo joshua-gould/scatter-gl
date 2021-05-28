@@ -15,10 +15,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-import * as THREE from 'three';
+
 import {ScatterPlotVisualizer} from './scatter_plot_visualizer';
 import {RenderContext} from './render';
 import {Styles} from "./styles";
+import {Scene, Vector3} from "three";
 
 /**
  * Creates and maintains a 2d canvas on top of the GL canvas. All labels, when
@@ -62,7 +63,7 @@ export class ScatterPlotVisualizerCanvasLabels
 
         const camera = rc.camera;
         const positions = this.worldSpacePointPositions;
-        const pos = new THREE.Vector3();
+        const pos = new Vector3();
         const labelStrings = this.labelStrings;
         const dpr = window.devicePixelRatio;
         const context = this.gc;
@@ -111,7 +112,7 @@ export class ScatterPlotVisualizerCanvasLabels
 
     }
 
-    setScene(scene: THREE.Scene) {
+    setScene(scene: Scene) {
     }
 
     onPickingRender(renderContext: RenderContext) {

@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-import * as THREE from 'three';
+import {Color as ThreeColor} from 'three';
 
 export interface Color {
   r: number;
@@ -41,7 +41,7 @@ function parseOpacity(colorString: string) {
 export function parseColor(inputColorString: string): Color {
   if (cache.has(inputColorString)) return cache.get(inputColorString)!;
   const {colorString, opacity} = parseOpacity(inputColorString);
-  const color = new THREE.Color(colorString);
+  const color = new ThreeColor(colorString);
   const {r, g, b} = color;
   const item = {r, g, b, opacity};
   cache.set(inputColorString, item);

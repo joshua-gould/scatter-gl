@@ -15,19 +15,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-import * as THREE from 'three';
+import {Camera, Color, LinearFilter, Texture, Vector3} from 'three';
 import {Point2D, Vector} from './types';
 
 
 /** Projects a 3d point into screen space */
 export function vector3DToScreenCoords(
-    cam: THREE.Camera,
+    cam: Camera,
     w: number,
     h: number,
-    v: THREE.Vector3
+    v: Vector3
 ): Point2D {
     let dpr = window.devicePixelRatio;
-    let pv = new THREE.Vector3().copy(v).project(cam);
+    let pv = new Vector3().copy(v).project(cam);
 
     // The screen-space origin is at the middle of the screen, with +y up.
     let coords: Point2D = [
@@ -41,9 +41,9 @@ export function vector3DToScreenCoords(
 export function vector3FromPackedArray(
     a: Float32Array,
     pointIndex: number
-): THREE.Vector3 {
+): Vector3 {
     const offset = pointIndex * 3;
-    return new THREE.Vector3(a[offset], a[offset + 1], a[offset + 2]);
+    return new Vector3(a[offset], a[offset + 1], a[offset + 2]);
 }
 
 /**
@@ -52,17 +52,17 @@ export function vector3FromPackedArray(
  */
 export function getNearFarPoints(
     worldSpacePoints: Float32Array,
-    cameraPos: THREE.Vector3,
-    cameraTarget: THREE.Vector3
+    cameraPos: Vector3,
+    cameraTarget: Vector3
 ): [number, number] {
     let shortestDist: number = Infinity;
     let furthestDist: number = 0;
-    const camToTarget = new THREE.Vector3().copy(cameraTarget).sub(cameraPos);
-    const camPlaneNormal = new THREE.Vector3().copy(camToTarget).normalize();
+    const camToTarget = new Vector3().copy(cameraTarget).sub(cameraPos);
+    const camPlaneNormal = new Vector3().copy(camToTarget).normalize();
     const n = worldSpacePoints.length / 3;
     let src = 0;
-    let p = new THREE.Vector3();
-    let camToPoint = new THREE.Vector3();
+    let p = new Vector3();
+    let camToPoint = new Vector3();
     for (let i = 0; i < n; i++) {
         p.x = worldSpacePoints[src];
         p.y = worldSpacePoints[src + 1];
@@ -81,12 +81,12 @@ export function getNearFarPoints(
 }
 
 function prepareTexture(
-    texture: THREE.Texture,
+    texture: Texture,
     needsUpdate = true
-): THREE.Texture {
+): Texture {
     texture.needsUpdate = needsUpdate;
     // Used if the texture isn't a power of 2.
-    texture.minFilter = THREE.LinearFilter;
+    texture.minFilter = LinearFilter;
     texture.generateMipmaps = false;
     texture.flipY = false;
     return texture;
@@ -97,8 +97,8 @@ function prepareTexture(
  */
 export function createTextureFromCanvas(
     image: HTMLCanvasElement
-): THREE.Texture {
-    const texture = new THREE.Texture(image);
+): Texture {
+    const texture = new Texture(image);
     return prepareTexture(texture);
 }
 
@@ -108,8 +108,8 @@ export function createTextureFromCanvas(
 export function createTextureFromImage(
     image: HTMLImageElement,
     onImageLoad: () => void
-): THREE.Texture {
-    const texture = new THREE.Texture(image);
+): Texture {
+    const texture = new Texture(image);
     image.onload = () => {
         texture.needsUpdate = true;
         onImageLoad();
@@ -177,7 +177,7 @@ export function packRgbIntoUint8Array(
 export function styleRgbFromHexColor(
     hex: number | string
 ): [number, number, number] {
-    const c = new THREE.Color(hex as string);
+    const c = new Color(hex as string);
     return [(c.r * 255) | 0, (c.g * 255) | 0, (c.b * 255) | 0];
 }
 
@@ -190,9 +190,9 @@ export function getDefaultPointInPolylineColor(
     endHue: number,
     saturation: number,
     lightness: number
-): THREE.Color {
+): Color {
     let hue = startHue + ((endHue - startHue) * index) / totalPoints;
 
     const hsl = `hsl(${hue}, ${toPercent(saturation)}, ${toPercent(lightness)})`;
-    return new THREE.Color(hsl);
+    return new Color(hsl);
 }

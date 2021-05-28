@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-import * as THREE from 'three';
+
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls';
 
 import {CameraType, LabelRenderParams, RenderContext} from './render';
@@ -25,6 +25,18 @@ import * as util from './util';
 
 import {ScatterPlotVisualizer} from './scatter_plot_visualizer';
 import {Point, ScatterBoundingBox, ScatterPlotRectangleSelector,} from './scatter_plot_rectangle_selector';
+import {
+    AxesHelper,
+    Camera,
+    MOUSE,
+    Object3D,
+    OrthographicCamera,
+    PerspectiveCamera,
+    PointLight,
+    Scene,
+    Vector3,
+    WebGLRenderer
+} from "three";
 
 /**
  * The length of the cube (diameter of the circumscribing sphere) where all the
@@ -40,18 +52,18 @@ const PERSP_CAMERA_NEAR_CLIP_PLANE = 0.01;
 const PERSP_CAMERA_FAR_CLIP_PLANE = 100;
 const ORTHO_CAMERA_FRUSTUM_HALF_EXTENT = 1.2;
 
-const START_CAMERA_POS_3D = new THREE.Vector3(0.45, 0.9, 1.6);
-const START_CAMERA_TARGET_3D = new THREE.Vector3(0, 0, 0);
-const START_CAMERA_POS_2D = new THREE.Vector3(0, 0, 4);
-const START_CAMERA_TARGET_2D = new THREE.Vector3(0, 0, 0);
+const START_CAMERA_POS_3D = new Vector3(0.45, 0.9, 1.6);
+const START_CAMERA_TARGET_3D = new Vector3(0, 0, 0);
+const START_CAMERA_POS_2D = new Vector3(0, 0, 4);
+const START_CAMERA_TARGET_2D = new Vector3(0, 0, 0);
 
 const ORBIT_MOUSE_ROTATION_SPEED = 1;
 const ORBIT_ANIMATION_ROTATION_CYCLE_IN_SECONDS = 7;
 const ORBIT_ZOOM_SPEED = 1.125;
 
 export type OnCameraMoveListener = (
-    cameraPosition: THREE.Vector3,
-    cameraTarget: THREE.Vector3
+    cameraPosition: Vector3,
+    cameraTarget: Vector3
 ) => void;
 
 /** Defines a camera, suitable for serialization. */
@@ -75,7 +87,7 @@ export interface ScatterPlotParams {
 }
 
 /**
- * Maintains a three.js instantiation and context,
+ * Maintains a js instantiation and context,
  * animation state, and all other logic that's
  * independent of how a 3D scatter plot is actually rendered. Also holds an
  * array of visualizers and dispatches application events to them.
@@ -104,13 +116,13 @@ export class ScatterPlot {
 
     private interactionMode = InteractionMode.PAN;
 
-    private renderer: THREE.WebGLRenderer;
+    private renderer: WebGLRenderer;
 
-    private scene: THREE.Scene;
+    private scene: Scene;
 
-    private light: THREE.PointLight;
+    private light: PointLight;
 
-    private camera!: THREE.Camera;
+    private camera!: Camera;
     private orbitAnimationOnNextCameraCreation: boolean = false;
     private orbitCameraControls: any;
     private orbitAnimationId: number | null = null;
@@ -135,8 +147,8 @@ export class ScatterPlot {
 
         this.computeLayoutValues();
 
-        this.scene = new THREE.Scene();
-        this.renderer = new THREE.WebGLRenderer({
+        this.scene = new Scene();
+        this.renderer = new WebGLRenderer({
             alpha: true,
             premultipliedAlpha: premultipliedAlpha,
             antialias: false,
@@ -145,7 +157,7 @@ export class ScatterPlot {
 
         this.renderer.setClearColor(this.styles.backgroundColor, 1);
         this.container.appendChild(this.renderer.domElement);
-        this.light = new THREE.PointLight(0xffecbf, 1, 0);
+        this.light = new PointLight(0xffecbf, 1, 0);
         this.scene.add(this.light);
 
         if (params.interactive) {
@@ -163,11 +175,11 @@ export class ScatterPlot {
     }
 
     private addInteractionListeners() {
-        this.container.addEventListener('mouseout', this.onMouseOut.bind(this));
-        this.container.addEventListener('mouseenter', this.onMouseOut.bind(this));
-        this.container.addEventListener('mousemove', this.onMouseMove.bind(this));
-        this.container.addEventListener('mousedown', this.onMouseDown.bind(this));
-        this.container.addEventListener('mouseup', this.onMouseUp.bind(this));
+        this.container.addEventListener('pointerout', this.onMouseOut.bind(this));
+        this.container.addEventListener('pointerenter', this.onMouseOut.bind(this));
+        this.container.addEventListener('pointermove', this.onMouseMove.bind(this));
+        this.container.addEventListener('pointerdown', this.onMouseDown.bind(this));
+        this.container.addEventListener('pointerup', this.onMouseUp.bind(this));
         // this.container.addEventListener('click', this.onClick.bind(this));
         window.addEventListener('keydown', this.onKeyDown.bind(this), false);
         window.addEventListener('keyup', this.onKeyUp.bind(this), false);
@@ -197,7 +209,7 @@ export class ScatterPlot {
         });
     }
 
-    private makeOrbitControls(camera: THREE.Camera, cameraIs3D: boolean) {
+    private makeOrbitControls(camera: Camera, cameraIs3D: boolean) {
         if (this.orbitCameraControls != null) {
             this.orbitCameraControls.dispose();
         }
@@ -210,11 +222,11 @@ export class ScatterPlot {
         occ.enableKeys = false;
         occ.rotateSpeed = ORBIT_MOUSE_ROTATION_SPEED;
         if (cameraIs3D) {
-            occ.mouseButtons.LEFT = THREE.MOUSE.LEFT; // Orbit
-            occ.mouseButtons.RIGHT = THREE.MOUSE.RIGHT; // Pan
+            occ.mouseButtons.LEFT = MOUSE.LEFT; // Orbit
+            occ.mouseButtons.RIGHT = MOUSE.RIGHT; // Pan
         } else {
-            occ.mouseButtons.LEFT = THREE.MOUSE.RIGHT; // Orbit
-            occ.mouseButtons.RIGHT = THREE.MOUSE.LEFT; //Pan
+            occ.mouseButtons.LEFT = MOUSE.RIGHT; // Orbit
+            occ.mouseButtons.RIGHT = MOUSE.LEFT; //Pan
         }
         occ.reset();
 
@@ -236,10 +248,10 @@ export class ScatterPlot {
     }
 
     private makeCamera3D(cameraDef: CameraDef, w: number, h: number) {
-        let camera: THREE.PerspectiveCamera;
+        let camera: PerspectiveCamera;
         {
             const aspectRatio = w / h;
-            camera = new THREE.PerspectiveCamera(
+            camera = new PerspectiveCamera(
                 PERSP_CAMERA_FOV_VERTICAL,
                 aspectRatio,
                 PERSP_CAMERA_NEAR_CLIP_PLANE,
@@ -250,7 +262,7 @@ export class ScatterPlot {
                 cameraDef.position[1],
                 cameraDef.position[2]
             );
-            const at = new THREE.Vector3(
+            const at = new Vector3(
                 cameraDef.target[0],
                 cameraDef.target[1],
                 cameraDef.target[2]
@@ -266,8 +278,8 @@ export class ScatterPlot {
     }
 
     private makeCamera2D(cameraDef: CameraDef, w: number, h: number) {
-        let camera: THREE.OrthographicCamera;
-        const target = new THREE.Vector3(
+        let camera: OrthographicCamera;
+        const target = new Vector3(
             cameraDef.target[0],
             cameraDef.target[1],
             cameraDef.target[2]
@@ -286,7 +298,7 @@ export class ScatterPlot {
                 top /= aspectRatio;
                 bottom /= aspectRatio;
             }
-            camera = new THREE.OrthographicCamera(
+            camera = new OrthographicCamera(
                 left,
                 right,
                 top,
@@ -300,7 +312,7 @@ export class ScatterPlot {
                 cameraDef.position[2]
             );
             // The orbit controls pan up operation is tied to the z dimension
-            camera.up = new THREE.Vector3(0, 0, 1);
+            camera.up = new Vector3(0, 0, 1);
             camera.lookAt(target);
             camera.zoom = cameraDef.zoom;
             camera.updateProjectionMatrix();
@@ -384,21 +396,21 @@ export class ScatterPlot {
         } else if (
             !e.ctrlKey &&
             this.sceneIs3D() &&
-            this.orbitCameraControls.mouseButtons.ORBIT === THREE.MOUSE.RIGHT
+            this.orbitCameraControls.mouseButtons.ORBIT === MOUSE.RIGHT
         ) {
             // The user happened to press the ctrl key when the tab was active,
             // unpressed the ctrl when the tab was inactive, and now he/she
             // is back to the projector tab.
-            this.orbitCameraControls.mouseButtons.ORBIT = THREE.MOUSE.LEFT;
-            this.orbitCameraControls.mouseButtons.PAN = THREE.MOUSE.RIGHT;
+            this.orbitCameraControls.mouseButtons.ORBIT = MOUSE.LEFT;
+            this.orbitCameraControls.mouseButtons.PAN = MOUSE.RIGHT;
         } else if (
             e.ctrlKey &&
             this.sceneIs3D() &&
-            this.orbitCameraControls.mouseButtons.ORBIT === THREE.MOUSE.LEFT
+            this.orbitCameraControls.mouseButtons.ORBIT === MOUSE.LEFT
         ) {
             // Similarly to the situation above.
-            this.orbitCameraControls.mouseButtons.ORBIT = THREE.MOUSE.RIGHT;
-            this.orbitCameraControls.mouseButtons.PAN = THREE.MOUSE.LEFT;
+            this.orbitCameraControls.mouseButtons.ORBIT = MOUSE.RIGHT;
+            this.orbitCameraControls.mouseButtons.PAN = MOUSE.LEFT;
         }
     }
 
@@ -443,8 +455,8 @@ export class ScatterPlot {
     private onKeyDown(e: KeyboardEvent) {
         // If ctrl is pressed, use left click to orbit
         if (this.sceneIs3D() && e.shiftKey) {
-            this.orbitCameraControls.mouseButtons.ORBIT = THREE.MOUSE.RIGHT;
-            this.orbitCameraControls.mouseButtons.PAN = THREE.MOUSE.LEFT;
+            this.orbitCameraControls.mouseButtons.ORBIT = MOUSE.RIGHT;
+            this.orbitCameraControls.mouseButtons.PAN = MOUSE.LEFT;
         }
 
         // If shift is pressed, start selecting
@@ -457,8 +469,8 @@ export class ScatterPlot {
     /** For using ctrl + left click as right click, and for circle select */
     private onKeyUp(e: KeyboardEvent) {
         if (this.sceneIs3D() && e.shiftKey) {
-            this.orbitCameraControls.mouseButtons.ORBIT = THREE.MOUSE.LEFT;
-            this.orbitCameraControls.mouseButtons.PAN = THREE.MOUSE.RIGHT;
+            this.orbitCameraControls.mouseButtons.ORBIT = MOUSE.LEFT;
+            this.orbitCameraControls.mouseButtons.PAN = MOUSE.RIGHT;
         }
 
         // If shift is released, stop selecting
@@ -489,7 +501,7 @@ export class ScatterPlot {
         return this.dimensions === 3;
     }
 
-    private remove3dAxesFromScene(): THREE.Object3D | undefined {
+    private remove3dAxesFromScene(): Object3D | undefined {
         const axes = this.scene.getObjectByName('axes');
         if (axes != null) {
             this.scene.remove(axes);
@@ -498,7 +510,7 @@ export class ScatterPlot {
     }
 
     private add3dAxes() {
-        const axes = new THREE.AxesHelper();
+        const axes = new AxesHelper();
         axes.name = 'axes';
         this.scene.add(axes);
     }
@@ -613,7 +625,7 @@ export class ScatterPlot {
         }
 
         const cameraType =
-            this.camera instanceof THREE.PerspectiveCamera
+            this.camera instanceof PerspectiveCamera
                 ? CameraType.Perspective
                 : CameraType.Orthographic;
 
@@ -697,11 +709,11 @@ export class ScatterPlot {
         const [newW, newH] = this.computeLayoutValues();
 
         if (this.dimensions === 3) {
-            const camera = this.camera as THREE.PerspectiveCamera;
+            const camera = this.camera as PerspectiveCamera;
             camera.aspect = newW / newH;
             camera.updateProjectionMatrix();
         } else {
-            const camera = this.camera as THREE.OrthographicCamera;
+            const camera = this.camera as OrthographicCamera;
             // Scale the ortho frustum by however much the window changed.
             const scaleW = newW / oldW;
             const scaleH = newH / oldH;
@@ -733,7 +745,7 @@ export class ScatterPlot {
             cameraDef.position[1],
             cameraDef.position[2]
         );
-        const at = new THREE.Vector3(
+        const at = new Vector3(
             cameraDef.target[0],
             cameraDef.target[1],
             cameraDef.target[2]

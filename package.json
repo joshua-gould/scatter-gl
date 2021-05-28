@@ -38,8 +38,9 @@
     "webpack-dev-server": "^3.11.0"
   },
   "dependencies": {
+    "@types/three": "^0.128.0",
     "simplify-js": "^1.2.4",
-    "three": "^0.118.3"
+    "three": "^0.129.0"
   },
   "prettier": {
     "bracketSpacing": false,

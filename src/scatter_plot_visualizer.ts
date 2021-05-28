@@ -15,8 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-import * as THREE from 'three';
+
 import {RenderContext} from './render';
+import {Scene} from "three";
 
 /**
  * ScatterPlotVisualizer is an interface used by ScatterPlotContainer
@@ -29,7 +30,7 @@ export interface ScatterPlotVisualizer {
   id: string;
 
   /** Called to initialize the visualizer with the primary scene. */
-  setScene(scene: THREE.Scene): void;
+  setScene(scene: Scene): void;
   /**
    * Called when the main scatter plot tears down the visualizer. Remove all
    * objects from the scene, and dispose any heavy resources.

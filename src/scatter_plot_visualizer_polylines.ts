@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-import * as THREE from 'three';
+import {BufferGeometry, LineBasicMaterial, Scene, LineSegments, BufferAttribute} from 'three';
 import {ScatterPlotVisualizer} from './scatter_plot_visualizer';
 import {RenderContext} from './render';
 import {Sequence} from './data';
@@ -29,13 +29,13 @@ export class ScatterPlotVisualizerPolylines implements ScatterPlotVisualizer {
   public id = 'POLYLINES';
 
   private sequences: Sequence[] = [];
-  private scene!: THREE.Scene;
-  private polylines: THREE.LineSegments[] = [];
+  private scene!: Scene;
+  private polylines: LineSegments[] = [];
   private polylinePositionBuffer: {
-    [polylineIndex: number]: THREE.BufferAttribute;
+    [polylineIndex: number]: BufferAttribute;
   } = {};
   private polylineColorBuffer: {
-    [polylineIndex: number]: THREE.BufferAttribute;
+    [polylineIndex: number]: BufferAttribute;
   } = {};
 
   private pointSequenceIndices = new Map<number, number>();
@@ -66,18 +66,18 @@ export class ScatterPlotVisualizerPolylines implements ScatterPlotVisualizer {
     this.polylines = [];
 
     for (let i = 0; i < this.sequences.length; i++) {
-      const geometry = new THREE.BufferGeometry();
+      const geometry = new BufferGeometry();
       geometry.setAttribute('position', this.polylinePositionBuffer[i]);
       geometry.setAttribute('color', this.polylineColorBuffer[i]);
 
-      const material = new THREE.LineBasicMaterial({
+      const material = new LineBasicMaterial({
         linewidth: 1, // unused default, overwritten by width array.
         opacity: 1.0, // unused default, overwritten by opacity array.
         transparent: true,
         vertexColors: true
       });
 
-      const polyline = new THREE.LineSegments(geometry, material);
+      const polyline = new LineSegments(geometry, material);
       polyline.frustumCulled = false;
       this.polylines.push(polyline);
       this.scene.add(polyline);
@@ -94,7 +94,7 @@ export class ScatterPlotVisualizerPolylines implements ScatterPlotVisualizer {
     this.polylineColorBuffer = {};
   }
 
-  setScene(scene: THREE.Scene) {
+  setScene(scene: Scene) {
     this.scene = scene;
   }
 
@@ -114,13 +114,13 @@ export class ScatterPlotVisualizerPolylines implements ScatterPlotVisualizer {
       const vertexCount = 2 * (sequence.indices.length - 1);
 
       let polylines = new Float32Array(vertexCount * XYZ_NUM_ELEMENTS);
-      this.polylinePositionBuffer[i] = new THREE.BufferAttribute(
+      this.polylinePositionBuffer[i] = new BufferAttribute(
         polylines,
         XYZ_NUM_ELEMENTS
       );
 
       let colors = new Float32Array(vertexCount * RGBA_NUM_ELEMENTS);
-      this.polylineColorBuffer[i] = new THREE.BufferAttribute(
+      this.polylineColorBuffer[i] = new BufferAttribute(
         colors,
         RGBA_NUM_ELEMENTS
       );
@@ -145,7 +145,7 @@ export class ScatterPlotVisualizerPolylines implements ScatterPlotVisualizer {
 
   onRender(renderContext: RenderContext) {
     for (let i = 0; i < this.polylines.length; i++) {
-      const material = this.polylines[i].material as THREE.LineBasicMaterial;
+      const material = this.polylines[i].material as LineBasicMaterial;
       material.opacity = renderContext.polylineOpacities[i];
       material.linewidth = renderContext.polylineWidths[i];
       this.polylineColorBuffer[i].array = renderContext.polylineColors[i];

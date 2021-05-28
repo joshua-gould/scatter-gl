@@ -15,17 +15,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-import * as THREE from 'three';
+
 import {ScatterPlotVisualizer} from './scatter_plot_visualizer';
 import {RenderContext} from './render';
 import {Styles} from './styles';
 import * as util from './util';
-import {
-  RGB_NUM_ELEMENTS,
-  RGBA_NUM_ELEMENTS,
-  UV_NUM_ELEMENTS,
-  XYZ_NUM_ELEMENTS,
-} from './constants';
+import {RGB_NUM_ELEMENTS, RGBA_NUM_ELEMENTS, UV_NUM_ELEMENTS, XYZ_NUM_ELEMENTS,} from './constants';
+import {BufferAttribute, BufferGeometry, Color, Mesh, Scene, ShaderMaterial, Texture} from "three";
 
 const MAX_CANVAS_DIMENSION = 8192;
 const NUM_GLYPHS = 256;
@@ -90,7 +86,7 @@ const FRAGMENT_SHADER = `
       }`;
 
 type GlyphTexture = {
-  texture: THREE.Texture;
+  texture: Texture;
   lengths: Float32Array;
   offsets: Float32Array;
 };
@@ -101,16 +97,16 @@ type GlyphTexture = {
 export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
   public id = '3D_LABELS';
 
-  private scene!: THREE.Scene;
+  private scene!: Scene;
   private labelStrings: string[] = [];
-  private geometry!: THREE.BufferGeometry;
+  private geometry!: BufferGeometry;
   private worldSpacePointPositions = new Float32Array(0);
   // private pickingColors = new Float32Array(0);
   private renderColors = new Float32Array(0);
-  private material!: THREE.ShaderMaterial;
+  private material!: ShaderMaterial;
   private uniforms: any = {};
-  private labelsMesh!: THREE.Mesh;
-  private positions!: THREE.BufferAttribute;
+  private labelsMesh!: Mesh;
+  private positions!: BufferAttribute;
   private totalVertexCount = 0;
   private labelVertexMap: number[][] = [];
   private glyphTexture!: GlyphTexture;
@@ -172,7 +168,7 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
       this.totalVertexCount * RGB_NUM_ELEMENTS
     );
     for (let i = 0; i < pointCount; i++) {
-      // const pickingColor = new THREE.Color(i);
+      // const pickingColor = new Color(i);
       this.labelVertexMap[i].forEach(j => {
         // this.pickingColors[RGB_NUM_ELEMENTS * j] = pickingColor.r;
         // this.pickingColors[RGB_NUM_ELEMENTS * j + 1] = pickingColor.g;
@@ -203,7 +199,7 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
     };
 
 
-    this.material = new THREE.ShaderMaterial({
+    this.material = new ShaderMaterial({
       uniforms: this.uniforms,
       transparent: true,
       vertexShader: makeVertexShader(fontSize, scale),
@@ -220,18 +216,18 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
     let positionArray = new Float32Array(
       this.totalVertexCount * XYZ_NUM_ELEMENTS
     );
-    this.positions = new THREE.BufferAttribute(positionArray, XYZ_NUM_ELEMENTS);
+    this.positions = new BufferAttribute(positionArray, XYZ_NUM_ELEMENTS);
 
     let posArray = new Float32Array(this.totalVertexCount * XYZ_NUM_ELEMENTS);
     let uvArray = new Float32Array(this.totalVertexCount * UV_NUM_ELEMENTS);
     let colorsArray = new Float32Array(
       this.totalVertexCount * RGB_NUM_ELEMENTS
     );
-    let positionObject = new THREE.BufferAttribute(posArray, 2);
-    let uv = new THREE.BufferAttribute(uvArray, UV_NUM_ELEMENTS);
-    let colors = new THREE.BufferAttribute(colorsArray, RGB_NUM_ELEMENTS);
+    let positionObject = new BufferAttribute(posArray, 2);
+    let uv = new BufferAttribute(uvArray, UV_NUM_ELEMENTS);
+    let colors = new BufferAttribute(colorsArray, RGB_NUM_ELEMENTS);
 
-    this.geometry = new THREE.BufferGeometry();
+    this.geometry = new BufferGeometry();
     this.geometry.setAttribute('posObj', positionObject);
     this.geometry.setAttribute('position', this.positions);
     this.geometry.setAttribute('uv', uv);
@@ -292,7 +288,7 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
       });
     }
 
-    this.labelsMesh = new THREE.Mesh(this.geometry, this.material);
+    this.labelsMesh = new Mesh(this.geometry, this.material);
     this.labelsMesh.name = '3d_labels_text';
     this.labelsMesh.renderOrder = 999;
     this.labelsMesh.frustumCulled = false;
@@ -306,18 +302,18 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
       this.geometry == null) {
       return;
     }
-    const colors = this.geometry.getAttribute('color') as THREE.BufferAttribute;
+    const colors = this.geometry.getAttribute('color') as BufferAttribute;
     colors.array = this.renderColors;
 
     const n = this.labelStrings.length;
     let src = 0;
-    const c = new THREE.Color(
+    const c = new Color(
         1,
         1,
         1
     );
     for (let i = 0; i < n; ++i) {
-      // const c = new THREE.Color(
+      // const c = new Color(
       //   pointColors[src],
       //   pointColors[src + 1],
       //   pointColors[src + 2]
@@ -332,7 +328,7 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
     colors.needsUpdate = true;
   }
 
-  setScene(scene: THREE.Scene) {
+  setScene(scene: Scene) {
     this.scene = scene;
   }
 
@@ -360,7 +356,7 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
     // }
     // this.material.uniforms.texture.value = this.glyphTexture.texture;
     // this.material.uniforms.picking.value = true;
-    // const colors = this.geometry.getAttribute('color') as THREE.BufferAttribute;
+    // const colors = this.geometry.getAttribute('color') as BufferAttribute;
     // colors.array = this.pickingColors;
     // colors.needsUpdate = true;
     this.removeMesh();
@@ -379,7 +375,7 @@ export class ScatterPlotVisualizer3DLabels implements ScatterPlotVisualizer {
     this.colorLabels();
     this.material.uniforms.texture.value = this.glyphTexture.texture;
     this.material.uniforms.picking.value = false;
-    const colors = this.geometry.getAttribute('color') as THREE.BufferAttribute;
+    const colors = this.geometry.getAttribute('color') as BufferAttribute;
     colors.array = this.renderColors;
     colors.needsUpdate = true;
   }

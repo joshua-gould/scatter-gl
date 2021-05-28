@@ -15,7 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-import * as THREE from 'three';
+
+
+import {Camera, Vector3} from "three";
 
 /**
  * LabelRenderParams describes the set of points that should have labels
@@ -49,9 +51,9 @@ export enum CameraType {
  */
 export class RenderContext {
   constructor(
-    public camera: THREE.Camera,
+    public camera: Camera,
     public cameraType: CameraType,
-    public cameraTarget: THREE.Vector3,
+    public cameraTarget: Vector3,
     public screenWidth: number,
     public screenHeight: number,
     public nearestCameraSpacePointZ: number,

@@ -15,10 +15,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-import * as THREE from 'three';
+
 import {ScatterPlotVisualizer} from './scatter_plot_visualizer';
 import {RenderContext} from './render';
 import {Styles} from "./styles";
+import {Vector3, Scene} from 'three';
 
 /**
  * Creates and maintains a 2d canvas on top of the GL canvas. All labels, when
@@ -61,7 +62,7 @@ export class ScatterPlotVisualizerSvgLabels
         this.worldSpacePointPositions = positions;
     }
 
-    private createLabel(pos: THREE.Vector3, text: string) {
+    private createLabel(pos: Vector3, text: string) {
         const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         label.setAttribute('dominant-baseline', "middle");
         label.setAttribute('text-anchor', "middle");
@@ -75,7 +76,7 @@ export class ScatterPlotVisualizerSvgLabels
 
         const camera = rc.camera;
         const positions = this.worldSpacePointPositions;
-        const pos = new THREE.Vector3();
+        const pos = new Vector3();
         const labelStrings = this.labelStrings;
         // @ts-ignore
         const widthHalf = (this.svgElement.parentElement.clientWidth) / 2;
@@ -125,7 +126,7 @@ export class ScatterPlotVisualizerSvgLabels
 
     }
 
-    setScene(scene: THREE.Scene) {
+    setScene(scene: Scene) {
     }
 
     onPickingRender(renderContext: RenderContext) {

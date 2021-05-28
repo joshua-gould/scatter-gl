@@ -15,8 +15,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-import * as THREE from 'three';
-import {Texture} from 'three';
+
+import {
+  BufferAttribute,
+  BufferGeometry,
+  Color,
+  Fog,
+  LessDepth,
+  NormalBlending,
+  PerspectiveCamera,
+  Points,
+  Scene,
+  ShaderChunk,
+  ShaderMaterial,
+  Texture
+} from 'three';
 import {ScatterPlotVisualizer} from './scatter_plot_visualizer';
 import {RenderContext} from './render';
 import {Styles} from './styles';
@@ -109,7 +122,7 @@ const FRAGMENT_SHADER = `
     
     varying vec4 vColor;
 
-    ${THREE.ShaderChunk['common']}
+    ${ShaderChunk['common']}
     ${FRAGMENT_SHADER_POINT_TEST_CHUNK}
     uniform vec3 fogColor;
     varying float fogDepth;
@@ -134,10 +147,10 @@ const FRAGMENT_SHADER = `
 export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
   public id = 'SPRITES';
 
-  private scene!: THREE.Scene;
-  private fog!: THREE.Fog;
-  private renderMaterial: THREE.ShaderMaterial;
-  private points!: THREE.Points;
+  private scene!: Scene;
+  private fog!: Fog;
+  private renderMaterial: ShaderMaterial;
+  private points!: Points;
   private worldSpacePointPositions = new Float32Array(0);
   private renderColors = new Float32Array(0);
   private standinTextureForPoints: Texture;
@@ -164,17 +177,17 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
     };
   }
 
-  private createRenderMaterial(): THREE.ShaderMaterial {
+  private createRenderMaterial(): ShaderMaterial {
 
     const uniforms = this.createUniforms();
-    return new THREE.ShaderMaterial({
+    return new ShaderMaterial({
       uniforms: uniforms,
       vertexShader: VEREX_SHADER,
       fragmentShader: FRAGMENT_SHADER,
       transparent: true,
-      depthFunc: THREE.LessDepth,
+      depthFunc: LessDepth,
       fog: this.styles.fog.enabled,
-      blending: THREE.NormalBlending,
+      blending: NormalBlending,
     });
   }
 
@@ -200,34 +213,34 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
    * Create points, set their locations and actually instantiate the
    * geometry.
    */
-  private createPointSprites(scene: THREE.Scene, positions: Float32Array) {
+  private createPointSprites(scene: Scene, positions: Float32Array) {
     const pointCount =
         positions != null ? positions.length / XYZ_NUM_ELEMENTS : 0;
     const geometry = this.createGeometry(pointCount);
 
-    this.fog = new THREE.Fog(0xffffff); // unused value, gets overwritten.
-    this.points = new THREE.Points(geometry, this.renderMaterial);
+    this.fog = new Fog(0xffffff); // unused value, gets overwritten.
+    this.points = new Points(geometry, this.renderMaterial);
     this.points.frustumCulled = false;
     scene.add(this.points);
   }
   /**
    * Set up buffer attributes to be used for the points/images.
    */
-  private createGeometry(pointCount: number): THREE.BufferGeometry {
+  private createGeometry(pointCount: number): BufferGeometry {
     const n = pointCount;
 
-    const geometry = new THREE.BufferGeometry();
+    const geometry = new BufferGeometry();
     geometry.setAttribute(
       'position',
-      new THREE.BufferAttribute(new Float32Array([]), XYZ_NUM_ELEMENTS)
+      new BufferAttribute(new Float32Array([]), XYZ_NUM_ELEMENTS)
     );
     geometry.setAttribute(
       'color',
-      new THREE.BufferAttribute(new Float32Array([]), RGBA_NUM_ELEMENTS)
+      new BufferAttribute(new Float32Array([]), RGBA_NUM_ELEMENTS)
     );
     geometry.setAttribute(
       'scaleFactor',
-      new THREE.BufferAttribute(new Float32Array([]), INDEX_NUM_ELEMENTS)
+      new BufferAttribute(new Float32Array([]), INDEX_NUM_ELEMENTS)
     );
     geometry.computeVertexNormals();
     return geometry;
@@ -273,7 +286,7 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
     (this.renderMaterial as any) = null;
   }
 
-  setScene(scene: THREE.Scene) {
+  setScene(scene: Scene) {
     this.scene = scene;
   }
 
@@ -292,9 +305,9 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
     this.renderMaterial = this.createRenderMaterial();
 
     const positions = (this.points
-      .geometry as THREE.BufferGeometry).getAttribute(
+      .geometry as BufferGeometry).getAttribute(
       'position'
-    ) as THREE.BufferAttribute;
+    ) as BufferAttribute;
     positions.array = newPositions;
     positions.count = newPositions.length / XYZ_NUM_ELEMENTS;
     positions.needsUpdate = true;
@@ -302,14 +315,14 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
 
 
   onRender(rc: RenderContext) {
-    const sceneIs3D: boolean = rc.camera instanceof THREE.PerspectiveCamera;
+    const sceneIs3D: boolean = rc.camera instanceof PerspectiveCamera;
     this.setFogDistances(
       sceneIs3D,
       rc.nearestCameraSpacePointZ,
       rc.farthestCameraSpacePointZ
     );
     this.scene.fog = this.fog;
-    this.scene.fog.color = new THREE.Color(rc.backgroundColor);
+    this.scene.fog.color = new Color(rc.backgroundColor);
     this.renderMaterial.uniforms.fogColor.value = this.scene.fog.color;
     this.renderMaterial.uniforms.fogNear.value = this.fog.near;
     this.renderMaterial.uniforms.fogFar.value = this.fog.far;
@@ -321,17 +334,17 @@ export class ScatterPlotVisualizerSprites implements ScatterPlotVisualizer {
       sceneIs3D
     );
     this.points.material = this.renderMaterial;
-    let colors = (this.points.geometry as THREE.BufferGeometry).getAttribute(
+    let colors = (this.points.geometry as BufferGeometry).getAttribute(
       'color'
-    ) as THREE.BufferAttribute;
+    ) as BufferAttribute;
     this.renderColors = rc.pointColors;
     colors.array = this.renderColors;
     colors.count = this.renderColors.length / RGBA_NUM_ELEMENTS;
     colors.needsUpdate = true;
     let scaleFactors = (this.points
-      .geometry as THREE.BufferGeometry).getAttribute(
+      .geometry as BufferGeometry).getAttribute(
       'scaleFactor'
-    ) as THREE.BufferAttribute;
+    ) as BufferAttribute;
     scaleFactors.array = rc.pointScaleFactors;
     scaleFactors.count = rc.pointScaleFactors.length / INDEX_NUM_ELEMENTS;
     scaleFactors.needsUpdate = true;
